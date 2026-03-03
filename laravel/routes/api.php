@@ -9,7 +9,7 @@ use App\Http\Controllers\Api\TutorController;
 use Illuminate\Support\Facades\Route;
 
 // Public auth routes
-Route::prefix('auth')->group(function () {
+Route::prefix('auth')->middleware('throttle:auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
 });
