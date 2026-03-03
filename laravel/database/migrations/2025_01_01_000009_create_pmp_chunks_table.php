@@ -2,14 +2,18 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement('CREATE EXTENSION IF NOT EXISTS vector');
+        $isPgsql = DB::getDriverName() === 'pgsql';
+
+        if ($isPgsql) {
+            DB::statement('CREATE EXTENSION IF NOT EXISTS vector');
+        }
 
         Schema::create('pmp_chunks', function (Blueprint $table) {
             $table->id();
@@ -20,14 +24,16 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Add pgvector column separately — Blueprint doesn't have a vector type
-        DB::statement('ALTER TABLE pmp_chunks ADD COLUMN embedding vector(1024)');
+        if ($isPgsql) {
+            // Vector column — Blueprint has no native vector type
+            DB::statement('ALTER TABLE pmp_chunks ADD COLUMN embedding vector(1024)');
 
-        // Index for fast cosine similarity search
-        DB::statement('CREATE INDEX pmp_chunks_embedding_idx ON pmp_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)');
+            // IVFFlat index for fast cosine similarity search
+            DB::statement('CREATE INDEX pmp_chunks_embedding_idx ON pmp_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)');
 
-        // Index for BM25 full-text search
-        DB::statement("CREATE INDEX pmp_chunks_content_fts_idx ON pmp_chunks USING gin (to_tsvector('english', content))");
+            // GIN index for BM25 full-text search
+            DB::statement("CREATE INDEX pmp_chunks_content_fts_idx ON pmp_chunks USING gin (to_tsvector('english', content))");
+        }
     }
 
     public function down(): void

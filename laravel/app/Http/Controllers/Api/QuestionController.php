@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -10,6 +12,7 @@ use App\Models\Question;
 use App\Models\QuestionAttempt;
 use App\Models\UserStreak;
 use App\Models\XpEvent;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -17,18 +20,20 @@ class QuestionController extends Controller
 {
     public function attempt(QuestionAttemptRequest $request, Question $question): JsonResponse
     {
+        /** @var User $user */
+        $user = $request->user();
         $selectedOption = $request->selected_option;
         $isCorrect = $selectedOption === $question->correct_option;
 
         $attempt = QuestionAttempt::query()->create([
-            'user_id' => $request->user()->id,
+            'user_id' => $user->id,
             'question_id' => $question->id,
             'selected_option' => $selectedOption,
             'is_correct' => $isCorrect,
         ]);
 
-        $this->awardXp($request->user(), $attempt, $isCorrect);
-        $this->updateStreak($request->user());
+        $this->awardXp($user, $attempt, $isCorrect);
+        $this->updateStreak($user);
 
         if (! $isCorrect) {
             GenerateAiExplanationJob::dispatch($attempt, $question->load('lesson'));
@@ -40,7 +45,7 @@ class QuestionController extends Controller
         );
     }
 
-    private function awardXp($user, QuestionAttempt $attempt, bool $isCorrect): void
+    private function awardXp(User $user, QuestionAttempt $attempt, bool $isCorrect): void
     {
         $xpAmount = $isCorrect ? 10 : 2;
         $reason = $isCorrect ? 'correct_answer' : 'attempted_answer';
@@ -55,7 +60,7 @@ class QuestionController extends Controller
         $user->increment('xp', $xpAmount);
     }
 
-    private function updateStreak($user): void
+    private function updateStreak(User $user): void
     {
         $streak = UserStreak::query()->firstOrCreate(['user_id' => $user->id]);
         $today = now()->toDateString();
