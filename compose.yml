@@ -1,0 +1,125 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: tarteel_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tarteel
+      POSTGRES_USER: tarteel
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tarteel -d tarteel"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tarteel
+
+  redis:
+    image: redis:7-alpine
+    container_name: tarteel_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tarteel
+
+  ollama:
+    image: ollama/ollama
+    container_name: tarteel_ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - tarteel
+
+  laravel:
+    build:
+      context: ./laravel
+      dockerfile: Dockerfile
+    container_name: tarteel_laravel
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_KEY: ${APP_KEY}
+      APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: tarteel
+      DB_USERNAME: tarteel
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      BROADCAST_CONNECTION: reverb
+      QUEUE_CONNECTION: redis
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      FASTAPI_URL: http://fastapi:8001
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+    volumes:
+      - ./laravel:/var/www/html
+      - laravel_vendor:/var/www/html/vendor
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - tarteel
+
+  fastapi:
+    build:
+      context: ./fastapi
+      dockerfile: Dockerfile
+    container_name: tarteel_fastapi
+    restart: unless-stopped
+    # No ports: exposed — internal network only
+    environment:
+      DATABASE_URL: postgresql://tarteel:${DB_PASSWORD}@postgres:5432/tarteel
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      OLLAMA_BASE_URL: http://ollama:11434
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+    volumes:
+      - ./fastapi:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    networks:
+      - tarteel
+
+volumes:
+  postgres_data:
+  redis_data:
+  ollama_data:
+  laravel_vendor:
+
+networks:
+  tarteel:
+    driver: bridge
