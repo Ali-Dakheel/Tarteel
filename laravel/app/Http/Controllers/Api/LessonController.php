@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\MarkProgressRequest;
 use App\Http\Resources\LessonResource;
 use App\Models\Lesson;
 use App\Models\UserProgress;
@@ -27,25 +28,21 @@ class LessonController extends Controller
 
         $lesson->setRelation('userProgress', $userProgress);
 
-        return response()->json(new LessonResource($lesson));
+        return $this->success(new LessonResource($lesson));
     }
 
-    public function markProgress(Request $request, string $slug): JsonResponse
+    public function markProgress(MarkProgressRequest $request, string $slug): JsonResponse
     {
         $lesson = Lesson::query()->where('slug', $slug)->firstOrFail();
-
-        $validated = $request->validate([
-            'time_spent_seconds' => ['required', 'integer', 'min:0'],
-        ]);
 
         $progress = UserProgress::query()->updateOrCreate(
             ['user_id' => $request->user()->id, 'lesson_id' => $lesson->id],
             [
                 'completed_at' => now(),
-                'time_spent_seconds' => $validated['time_spent_seconds'],
+                'time_spent_seconds' => $request->validated('time_spent_seconds'),
             ]
         );
 
-        return response()->json(['completed_at' => $progress->completed_at]);
+        return $this->success(['completed_at' => $progress->completed_at]);
     }
 }

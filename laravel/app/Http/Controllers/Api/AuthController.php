@@ -30,10 +30,10 @@ class AuthController extends Controller
 
         $token = $user->createToken('api')->plainTextToken;
 
-        return response()->json([
+        return $this->created([
             'user' => new UserResource($user),
             'token' => $token,
-        ], 201);
+        ]);
     }
 
     public function login(LoginRequest $request): JsonResponse
@@ -47,7 +47,7 @@ class AuthController extends Controller
         $user = Auth::user();
         $token = $user->createToken('api')->plainTextToken;
 
-        return response()->json([
+        return $this->success([
             'user' => new UserResource($user),
             'token' => $token,
         ]);
@@ -57,11 +57,11 @@ class AuthController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json(['message' => 'Logged out successfully.']);
+        return $this->success(['message' => 'Logged out successfully.']);
     }
 
     public function me(Request $request): JsonResponse
     {
-        return response()->json(new UserResource($request->user()));
+        return $this->success(new UserResource($request->user()));
     }
 }

@@ -19,7 +19,7 @@ class ProgressController extends Controller
             ->with('lesson:id,title,slug,domain_id')
             ->get();
 
-        return response()->json([
+        return $this->success([
             'completed_lessons' => $progress->whereNotNull('completed_at')->count(),
             'progress' => UserProgressResource::collection($progress),
         ]);
@@ -32,7 +32,7 @@ class ProgressController extends Controller
             ['current_streak' => 0, 'longest_streak' => 0]
         );
 
-        return response()->json([
+        return $this->success([
             'current_streak' => $streak->current_streak,
             'longest_streak' => $streak->longest_streak,
             'last_activity_date' => $streak->last_activity_date,

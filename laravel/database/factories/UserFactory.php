@@ -29,6 +29,8 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'xp' => 0,
+            'subscription_status' => 'free',
         ];
     }
 
@@ -39,6 +41,16 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that the user has a pro subscription.
+     */
+    public function pro(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'subscription_status' => 'pro',
         ]);
     }
 }

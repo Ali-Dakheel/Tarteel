@@ -17,15 +17,7 @@ class QuestionResource extends JsonResource
             'stem' => $this->stem,
             'options' => $this->options,
             'difficulty' => $this->difficulty,
-            // correct_option intentionally omitted from list responses
-            'correct_option' => $this->when(
-                $request->routeIs('questions.show'),
-                $this->correct_option
-            ),
-            'explanation' => $this->when(
-                $request->routeIs('questions.show'),
-                $this->explanation
-            ),
+            // correct_option and explanation are intentionally omitted — exposed via QuestionAttemptResource after an attempt
         ];
     }
 }

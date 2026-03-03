@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"C:\\\\Users\\\\User\\\\.config\\\\herd\\\\bin\\\\php84\\\\php.exe\" vendor/bin/pint --dirty)"
+    ]
+  }
+}

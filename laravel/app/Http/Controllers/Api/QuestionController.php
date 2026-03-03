@@ -10,11 +10,10 @@ use App\Http\Resources\QuestionAttemptResource;
 use App\Jobs\GenerateAiExplanationJob;
 use App\Models\Question;
 use App\Models\QuestionAttempt;
+use App\Models\User;
 use App\Models\UserStreak;
 use App\Models\XpEvent;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class QuestionController extends Controller
 {
@@ -36,13 +35,10 @@ class QuestionController extends Controller
         $this->updateStreak($user);
 
         if (! $isCorrect) {
-            GenerateAiExplanationJob::dispatch($attempt, $question->load('lesson'));
+            GenerateAiExplanationJob::dispatch($attempt, $question->load('lesson.domain'));
         }
 
-        return response()->json(
-            new QuestionAttemptResource($attempt->load('question')),
-            201
-        );
+        return $this->created(new QuestionAttemptResource($attempt->load('question')));
     }
 
     private function awardXp(User $user, QuestionAttempt $attempt, bool $isCorrect): void
