@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(\"C:\\\\Users\\\\User\\\\.config\\\\herd\\\\bin\\\\php84\\\\php.exe\" vendor/bin/pint --dirty)"
+      "Bash(\"C:\\\\Users\\\\User\\\\.config\\\\herd\\\\bin\\\\php84\\\\php.exe\" vendor/bin/pint --dirty)",
+      "WebFetch(domain:laraveldaily.com)",
+      "Bash(\"C:\\\\Users\\\\User\\\\.config\\\\herd\\\\bin\\\\php84\\\\php.exe\" artisan test --compact)",
+      "Bash(\"C:\\\\Users\\\\User\\\\.config\\\\herd\\\\bin\\\\php84\\\\php.exe\" -r \"require ''vendor/autoload.php''; echo class_exists\\(''Laravel\\\\Sanctum\\\\HasApiTokens''\\) ? ''sanctum ok'' : ''sanctum missing'';\")",
+      "Bash(composer require laravel/sanctum --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix)",
+      "Read(//c/ProgramData/ComposerSetup/**)",
+      "Bash(\"C:\\\\Users\\\\User\\\\.config\\\\herd\\\\bin\\\\php84\\\\php.exe\" artisan vendor:publish --tag=sanctum-migrations --no-interaction)"
     ]
   }
 }
