@@ -19,10 +19,19 @@ class QuestionController extends Controller
 {
     public function attempt(QuestionAttemptRequest $request, Question $question): JsonResponse
     {
+        $question->load('lesson.domain');
+
+        $this->authorize('view', $question->lesson);
+
         /** @var User $user */
         $user = $request->user();
         $selectedOption = $request->selected_option;
         $isCorrect = $selectedOption === $question->correct_option;
+
+        $isFirstAttempt = ! QuestionAttempt::query()
+            ->where('user_id', $user->id)
+            ->where('question_id', $question->id)
+            ->exists();
 
         $attempt = QuestionAttempt::query()->create([
             'user_id' => $user->id,
@@ -31,12 +40,15 @@ class QuestionController extends Controller
             'is_correct' => $isCorrect,
         ]);
 
-        $this->awardXp($user, $attempt, $isCorrect);
-        $this->updateStreak($user);
+        if ($isFirstAttempt) {
+            $this->awardXp($user, $attempt, $isCorrect);
 
-        if (! $isCorrect) {
-            GenerateAiExplanationJob::dispatch($attempt, $question->load('lesson.domain'));
+            if (! $isCorrect) {
+                GenerateAiExplanationJob::dispatch($attempt, $question);
+            }
         }
+
+        $this->updateStreak($user);
 
         return $this->created(new QuestionAttemptResource($attempt->load('question')));
     }

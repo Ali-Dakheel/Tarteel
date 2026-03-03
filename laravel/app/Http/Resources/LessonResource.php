@@ -16,7 +16,7 @@ class LessonResource extends JsonResource
             'domain_id' => $this->domain_id,
             'title' => $this->title,
             'slug' => $this->slug,
-            'content' => $this->when($this->relationLoaded('domain'), fn () => $this->content),
+            'content' => $this->when($this->relationLoaded('questions'), fn () => $this->content),
             'order' => $this->order,
             'is_free' => $this->is_free,
             'question_count' => $this->whenCounted('questions'),

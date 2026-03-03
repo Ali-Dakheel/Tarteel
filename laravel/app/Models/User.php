@@ -61,6 +61,10 @@ class User extends Authenticatable
 
     public function isPro(): bool
     {
-        return $this->subscription_status === 'pro';
+        if ($this->subscription_status === 'pro') {
+            return true;
+        }
+
+        return $this->trial_ends_at !== null && $this->trial_ends_at->isFuture();
     }
 }

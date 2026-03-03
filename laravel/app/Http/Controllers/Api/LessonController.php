@@ -21,6 +21,8 @@ class LessonController extends Controller
             ->with(['domain', 'questions'])
             ->firstOrFail();
 
+        $this->authorize('view', $lesson);
+
         $userProgress = UserProgress::query()
             ->where('user_id', $request->user()->id)
             ->where('lesson_id', $lesson->id)
@@ -34,6 +36,8 @@ class LessonController extends Controller
     public function markProgress(MarkProgressRequest $request, string $slug): JsonResponse
     {
         $lesson = Lesson::query()->where('slug', $slug)->firstOrFail();
+
+        $this->authorize('view', $lesson);
 
         $progress = UserProgress::query()->updateOrCreate(
             ['user_id' => $request->user()->id, 'lesson_id' => $lesson->id],
