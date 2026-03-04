@@ -1,6 +1,6 @@
-FROM php:8.3-cli
+FROM php:8.4-cli
 
-# System dependencies
+# System dependencies + intl (required by Filament)
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -8,7 +8,8 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libpq-dev \
     libzip-dev \
-    && docker-php-ext-install pdo pdo_pgsql zip pcntl posix \
+    libicu-dev \
+    && docker-php-ext-install pdo pdo_pgsql zip pcntl posix intl \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Redis extension
@@ -21,7 +22,9 @@ WORKDIR /var/www/html
 
 # Install dependencies (cached layer if composer.json unchanged)
 COPY composer.json composer.lock ./
-RUN composer install --no-scripts --no-autoloader --prefer-dist --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-posix
+RUN composer install --no-scripts --no-autoloader --prefer-dist \
+    --ignore-platform-req=ext-pcntl \
+    --ignore-platform-req=ext-posix
 
 # Copy app source
 COPY . .
