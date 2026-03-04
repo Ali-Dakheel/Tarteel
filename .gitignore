@@ -1,0 +1,18 @@
+# Python
+fastapi/.venv/
+fastapi/__pycache__/
+fastapi/**/__pycache__/
+*.pyc
+
+# PDF source material (large, may be copyrighted)
+fastapi/data/*.pdf
+fastapi/data/*.epub
+fastapi/data/*.docx
+
+# Env files
+.env
+*.env.local
+
+# OS
+.DS_Store
+Thumbs.db

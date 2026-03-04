@@ -47,7 +47,8 @@ async def write_db_cache(
     chunk_ids: list[int],
 ) -> None:
     """Upsert into ai_response_cache. Safe to call multiple times — idempotent via ON CONFLICT."""
-    expires_at = datetime.now(timezone.utc) + timedelta(seconds=CACHE_TTL_SECONDS)
+    # expires_at column is `timestamp` (no timezone) — must use naive datetime
+    expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(seconds=CACHE_TTL_SECONDS)
     await conn.execute(
         """
         INSERT INTO ai_response_cache

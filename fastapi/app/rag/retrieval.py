@@ -117,8 +117,8 @@ async def retrieve(
     conn: asyncpg.Connection,
     retrieval_limit: int = 25,
 ) -> list[tuple[int, float]]:
-    """Run BM25 + vector search in parallel, fuse with RRF. Returns top 25 (chunk_id, score)."""
-    bm25_task = bm25_search(query, domain, lesson_id, retrieval_limit, conn)
-    vector_task = vector_search(embedding, domain, lesson_id, retrieval_limit, conn)
-    bm25_results, vector_results = await asyncio.gather(bm25_task, vector_task)
+    """Run BM25 + vector search sequentially (same connection), fuse with RRF. Returns top 25."""
+    # asyncpg connections don't support concurrent queries — run sequentially
+    bm25_results = await bm25_search(query, domain, lesson_id, retrieval_limit, conn)
+    vector_results = await vector_search(embedding, domain, lesson_id, retrieval_limit, conn)
     return reciprocal_rank_fusion(bm25_results, vector_results, top_n=retrieval_limit)

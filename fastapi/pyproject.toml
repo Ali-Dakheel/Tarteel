@@ -10,6 +10,8 @@ dependencies = [
     "httpx>=0.28.1",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
+    "pdfplumber>=0.11",
+    "pymupdf>=1.24",
 ]
 
 [dependency-groups]
