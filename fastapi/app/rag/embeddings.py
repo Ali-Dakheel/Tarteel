@@ -1,6 +1,6 @@
 import httpx
 
-from config import settings
+from app.config import settings
 
 EMBEDDING_MODEL = "bge-m3"
 EMBEDDING_DIM = 1024

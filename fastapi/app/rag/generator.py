@@ -4,7 +4,7 @@ from typing import AsyncGenerator
 import httpx
 from fastapi import HTTPException, status
 
-from config import settings
+from app.config import settings
 
 GENERATOR_MODEL = "qwen3:8b"
 MAX_CONTEXT_TOKENS = 3800

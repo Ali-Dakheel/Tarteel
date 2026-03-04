@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
 
-from config import settings
+from app.config import settings
 
 _header = APIKeyHeader(name="X-Internal-Key", auto_error=False)
 

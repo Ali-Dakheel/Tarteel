@@ -3,7 +3,7 @@ from typing import AsyncGenerator
 
 import asyncpg
 
-from config import settings
+from app.config import settings
 
 _pool: asyncpg.Pool | None = None
 

@@ -3,8 +3,8 @@ import re
 
 import httpx
 
-from config import settings
-from schemas import Chunk
+from app.config import settings
+from app.schemas import Chunk
 
 RERANKER_MODEL = "qllama/bge-reranker-v2-m3"
 RERANKER_CONCURRENCY = 4

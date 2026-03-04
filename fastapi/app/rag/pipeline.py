@@ -3,14 +3,14 @@ from typing import AsyncGenerator
 
 import httpx
 
-from cache import make_cache_key, set_cached_response, write_db_cache
-from database import fetch_chunks_by_ids, get_connection
-from prompts import SYSTEM_PROMPT_AR, build_user_message, should_use_think_mode
-from rag.embeddings import embed_query
-from rag.generator import assemble_context, generate_full, generate_stream
-from rag.reranker import rerank
-from rag.retrieval import retrieve
-from schemas import Chunk, ExplainRequest
+from app.cache import make_cache_key, set_cached_response, write_db_cache
+from app.database import fetch_chunks_by_ids, get_connection
+from app.prompts import SYSTEM_PROMPT_AR, build_user_message, should_use_think_mode
+from app.rag.embeddings import embed_query
+from app.rag.generator import assemble_context, generate_full, generate_stream
+from app.rag.reranker import rerank
+from app.rag.retrieval import retrieve
+from app.schemas import Chunk, ExplainRequest
 
 
 async def _run_rag_stages(

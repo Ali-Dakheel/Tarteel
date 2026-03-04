@@ -14,7 +14,10 @@
       "WebFetch(domain:ollama.com)",
       "WebFetch(domain:hub.docker.com)",
       "WebFetch(domain:docs.ollama.com)",
-      "WebFetch(domain:collabnix.com)"
+      "WebFetch(domain:collabnix.com)",
+      "Bash(powershell -NoProfile -Command \"Set-Location ''c:\\\\Users\\\\User\\\\Desktop\\\\Tarteel\\\\fastapi''; Get-ChildItem -Path app -Recurse -Filter ''*.py'' | ForEach-Object { $c = Get-Content $_FullName -Raw; $u = $c -replace ''from config import'',''from app.config import'' -replace ''from schemas import'',''from app.schemas import'' -replace ''from cache import'',''from app.cache import'' -replace ''from database import'',''from app.database import'' -replace ''from prompts import'',''from app.prompts import'' -replace ''from rag\\\\.embeddings import'',''from app.rag.embeddings import'' -replace ''from rag\\\\.generator import'',''from app.rag.generator import'' -replace ''from rag\\\\.reranker import'',''from app.rag.reranker import'' -replace ''from rag\\\\.retrieval import'',''from app.rag.retrieval import''; if \\($c -ne $u\\) { [System.IO.File]::WriteAllText\\($_FullName, $u\\); Write-Host \\(''Updated: '' + $_Name\\) } }\")",
+      "Bash(\"C:\\\\Users\\\\User\\\\.local\\\\bin\\\\uv.exe\" run python -c \":*)",
+      "Bash(\"c:\\\\Users\\\\User\\\\Desktop\\\\Tarteel\\\\fastapi\\\\.venv\\\\Scripts\\\\python.exe\" -c \":*)"
     ]
   }
 }

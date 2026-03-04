@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 import asyncpg
 import redis.asyncio as aioredis
 
-from config import settings
+from app.config import settings
 
 _redis: aioredis.Redis | None = None
 

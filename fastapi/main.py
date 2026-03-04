@@ -5,12 +5,12 @@ import httpx
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from auth import verify_internal_key
-from cache import close_redis, create_redis, get_cached_response, make_cache_key
-from config import settings
-from database import close_pool, create_pool
-from rag.pipeline import run_pipeline_full, run_pipeline_streaming
-from schemas import ExplainRequest, HealthResponse
+from app.auth import verify_internal_key
+from app.cache import close_redis, create_redis, get_cached_response, make_cache_key
+from app.config import settings
+from app.database import close_pool, create_pool
+from app.rag.pipeline import run_pipeline_full, run_pipeline_streaming
+from app.schemas import ExplainRequest, HealthResponse
 
 
 @asynccontextmanager
