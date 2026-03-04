@@ -1,6 +1,7 @@
+import json
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class BaseRequest(BaseModel):
@@ -23,6 +24,14 @@ class Chunk(BaseModel):
     content: str
     metadata: dict[str, Any]
     chunk_index: int
+
+    @field_validator("metadata", mode="before")
+    @classmethod
+    def parse_metadata(cls, v: Any) -> Any:
+        # asyncpg returns JSONB columns as raw JSON strings
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
 
 
 class ExplainResponse(BaseModel):
