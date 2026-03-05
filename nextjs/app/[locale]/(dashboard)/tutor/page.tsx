@@ -82,9 +82,9 @@ export default function TutorPage() {
         <AiExplanation
           key={key}
           payload={{
-            question_id: 0,
-            selected_option: 0,
-            lesson_id: 0,
+            question_id: null,
+            selected_option: null,
+            lesson_id: null,
             domain,
             question_stem: stem,
           }}

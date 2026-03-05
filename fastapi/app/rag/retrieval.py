@@ -9,6 +9,7 @@ async def bm25_search(
     lesson_id: int | None,
     limit: int,
     conn: asyncpg.Connection,
+    search_all_domains: bool = False,
 ) -> list[tuple[int, float]]:
     """BM25 via PostgreSQL FTS. Returns (chunk_id, rank) tuples ordered by rank DESC."""
     if lesson_id is not None:
@@ -28,6 +29,23 @@ async def bm25_search(
             LIMIT $4
             """,
             query, domain, lesson_id, limit,
+        )
+    elif search_all_domains:
+        # Free-form tutor query — search across all domains for maximum recall
+        rows = await conn.fetch(
+            """
+            SELECT id, ts_rank_cd(
+                to_tsvector('english', content),
+                websearch_to_tsquery('english', $1),
+                32
+            ) AS rank
+            FROM pmp_chunks
+            WHERE
+                to_tsvector('english', content) @@ websearch_to_tsquery('english', $1)
+            ORDER BY rank DESC
+            LIMIT $2
+            """,
+            query, limit,
         )
     else:
         rows = await conn.fetch(
@@ -55,6 +73,7 @@ async def vector_search(
     lesson_id: int | None,
     limit: int,
     conn: asyncpg.Connection,
+    search_all_domains: bool = False,
 ) -> list[tuple[int, float]]:
     """pgvector cosine similarity search. Returns (chunk_id, distance) tuples ordered ASC."""
     # asyncpg can't bind Python list to vector type directly — format as literal string
@@ -73,6 +92,19 @@ async def vector_search(
             LIMIT $3
             """,
             domain, lesson_id, limit,
+        )
+    elif search_all_domains:
+        # Free-form tutor query — search across all domains for maximum recall
+        rows = await conn.fetch(
+            f"""
+            SELECT id, (embedding <=> '{vector_literal}'::vector) AS distance
+            FROM pmp_chunks
+            WHERE
+                embedding IS NOT NULL
+            ORDER BY distance ASC
+            LIMIT $1
+            """,
+            limit,
         )
     else:
         rows = await conn.fetch(
@@ -116,9 +148,10 @@ async def retrieve(
     lesson_id: int | None,
     conn: asyncpg.Connection,
     retrieval_limit: int = 25,
+    search_all_domains: bool = False,
 ) -> list[tuple[int, float]]:
-    """Run BM25 + vector search sequentially (same connection), fuse with RRF. Returns top 25."""
+    """Run BM25 + vector search sequentially (same connection), fuse with RRF."""
     # asyncpg connections don't support concurrent queries — run sequentially
-    bm25_results = await bm25_search(query, domain, lesson_id, retrieval_limit, conn)
-    vector_results = await vector_search(embedding, domain, lesson_id, retrieval_limit, conn)
+    bm25_results = await bm25_search(query, domain, lesson_id, retrieval_limit, conn, search_all_domains)
+    vector_results = await vector_search(embedding, domain, lesson_id, retrieval_limit, conn, search_all_domains)
     return reciprocal_rank_fusion(bm25_results, vector_results, top_n=retrieval_limit)

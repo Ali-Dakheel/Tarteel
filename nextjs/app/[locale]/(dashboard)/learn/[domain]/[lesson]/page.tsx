@@ -124,7 +124,7 @@ export default function LessonPage() {
               disabled={currentQ === 0}
             >
               <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
-              {t('back', { ns: 'common' })}
+              {tCommon('back')}
             </Button>
             {currentQ < questions.length - 1 ? (
               <Button onClick={() => setCurrentQ((q) => q + 1)}>

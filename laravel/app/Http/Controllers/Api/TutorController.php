@@ -19,7 +19,7 @@ class TutorController extends Controller
         $this->authorize('use-tutor');
 
         $payload = $request->validated();
-        $cacheKey = hash('sha256', $payload['question_id'].':'.$payload['selected_option']);
+        $cacheKey = hash('sha256', ($payload['question_id'] ?? 'null').':'.($payload['selected_option'] ?? 'null'));
 
         $cached = AiResponseCache::query()
             ->where('query_hash', $cacheKey)
@@ -31,7 +31,7 @@ class TutorController extends Controller
 
             return response()->stream(function () use ($cachedResponse): void {
                 echo $cachedResponse;
-                ob_flush();
+                if (ob_get_level() > 0) ob_flush();
                 flush();
             }, Response::HTTP_OK, [
                 'Content-Type' => 'text/event-stream',
@@ -62,13 +62,13 @@ class TutorController extends Controller
                     $chunk = $body->read(1024);
                     if ($chunk !== '') {
                         echo $chunk;
-                        ob_flush();
+                        if (ob_get_level() > 0) ob_flush();
                         flush();
                     }
                 }
             } catch (GuzzleException $e) {
                 echo "data: {\"error\": \"AI service unavailable\"}\n\n";
-                ob_flush();
+                if (ob_get_level() > 0) ob_flush();
                 flush();
             }
         }, Response::HTTP_OK, [

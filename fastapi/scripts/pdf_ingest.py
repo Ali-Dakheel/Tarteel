@@ -39,8 +39,8 @@ if env_file.exists():
 DATABASE_URL = os.environ["DATABASE_URL"]
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 EMBEDDING_MODEL = "bge-m3"
-CHUNK_SIZE_WORDS = 400
-CHUNK_OVERLAP_WORDS = 50
+CHUNK_SIZE_WORDS = 200
+CHUNK_OVERLAP_WORDS = 40
 BATCH_SIZE = 8
 DATA_DIR = Path(__file__).parent.parent / "data"
 

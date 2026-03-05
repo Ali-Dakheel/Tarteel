@@ -16,9 +16,9 @@ class ExplainRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'question_id' => ['required', 'integer', 'exists:questions,id'],
-            'selected_option' => ['required', 'integer', 'min:0', 'max:3'],
-            'lesson_id' => ['required', 'integer', 'exists:lessons,id'],
+            'question_id' => ['nullable', 'integer', 'exists:questions,id'],
+            'selected_option' => ['nullable', 'integer', 'min:0', 'max:3'],
+            'lesson_id' => ['nullable', 'integer', 'exists:lessons,id'],
             'domain' => ['required', 'string'],
             'question_stem' => ['required', 'string'],
         ];

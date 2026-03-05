@@ -25,6 +25,11 @@ export function AiExplanation({ payload, autoStart = false }: Props) {
   useEffect(() => {
     if (!autoStart) return;
 
+    // Local flag — each effect invocation owns its own abort state.
+    // Using a ref would share state across the two calls React Strict Mode makes,
+    // causing the first (cleaned-up) stream to append after the ref is reset.
+    let aborted = false;
+
     setLoading(true);
     setText('');
     setDone(false);
@@ -33,23 +38,27 @@ export function AiExplanation({ payload, autoStart = false }: Props) {
     explainSSE(
       payload,
       (chunk) => {
+        if (aborted) return;
         setText((prev) => prev + chunk);
-        // Auto-scroll
         if (containerRef.current) {
           containerRef.current.scrollTop = containerRef.current.scrollHeight;
         }
       },
       () => {
+        if (aborted) return;
         setLoading(false);
         setDone(true);
       },
       (err) => {
+        if (aborted) return;
         setLoading(false);
         setError(err.message);
       },
     );
+
+    return () => { aborted = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoStart, payload.question_id, payload.selected_option]);
+  }, [autoStart, payload.question_id, payload.selected_option, payload.question_stem]);
 
   if (!loading && !text && !error) return null;
 

@@ -69,6 +69,20 @@ async def generate_full(
     return "".join(parts)
 
 
+def format_chunk_with_source(content: str, metadata: dict | None) -> str:
+    """Prefix chunk text with its source and page so the model can cite it."""
+    meta = metadata or {}
+    source = meta.get("source", "")
+    page = meta.get("page", "")
+    if source and page:
+        prefix = f"[{source}, p.{page}]"
+    elif source:
+        prefix = f"[{source}]"
+    else:
+        return content
+    return f"{prefix}\n{content}"
+
+
 def estimate_tokens(text: str) -> int:
     return len(text) // CHARS_PER_TOKEN
 

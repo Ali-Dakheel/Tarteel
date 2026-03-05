@@ -32,6 +32,5 @@ export function proxy(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  // Match all routes except Next.js internals and static files
-  matcher: ['/((?!_next|.*\\..*).*)'],
+  matcher: ['/((?!_next|api|.*\\..*).*)'],
 };

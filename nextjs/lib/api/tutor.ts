@@ -1,7 +1,7 @@
 export type ExplainPayload = {
-  question_id: number;
-  selected_option: number;
-  lesson_id: number;
+  question_id: number | null;
+  selected_option: number | null;
+  lesson_id: number | null;
   domain: string;
   question_stem: string;
 };
@@ -35,11 +35,31 @@ export async function explainSSE(
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
+    let buffer = '';
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      onChunk(decoder.decode(value, { stream: true }));
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // SSE events are separated by double newlines
+      const events = buffer.split('\n\n');
+      buffer = events.pop() ?? ''; // keep incomplete last chunk
+
+      for (const event of events) {
+        for (const line of event.split('\n')) {
+          if (line.startsWith('data: ')) {
+            const raw = line.slice(6);
+            if (raw === '[DONE]') break;
+            try {
+              onChunk(JSON.parse(raw) as string);
+            } catch {
+              if (raw) onChunk(raw);
+            }
+          }
+        }
+      }
     }
 
     onDone();

@@ -15,6 +15,10 @@ RUN apt-get update && apt-get install -y \
 # Redis extension
 RUN pecl install redis && docker-php-ext-enable redis
 
+# Disable output buffering for SSE streaming
+RUN echo "output_buffering = Off" >> /usr/local/etc/php/php.ini \
+    && echo "implicit_flush = On" >> /usr/local/etc/php/php.ini
+
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -28,8 +32,12 @@ RUN composer install --no-scripts --no-autoloader --prefer-dist \
 
 # Copy app source
 COPY . .
-RUN composer dump-autoload --optimize
+RUN composer dump-autoload --optimize --no-scripts
 
 EXPOSE 8000
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# Start both the HTTP server and Horizon queue worker
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+CMD ["/usr/local/bin/docker-entrypoint.sh"]

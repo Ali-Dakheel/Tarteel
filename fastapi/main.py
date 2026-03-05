@@ -1,3 +1,4 @@
+import json
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -35,7 +36,7 @@ app = FastAPI(
 
 
 async def _cached_sse(explanation: str) -> AsyncGenerator[str, None]:
-    yield f"data: {explanation}\n\n"
+    yield f"data: {json.dumps(explanation, ensure_ascii=False)}\n\n"
     yield "data: [DONE]\n\n"
 
 
@@ -47,7 +48,7 @@ async def explain(request: Request, body: ExplainRequest):
     - anything else     → full JSON body (GenerateAiExplanationJob background)
     """
     client = request.app.state.client
-    cache_key = make_cache_key(body.question_id, body.selected_option)
+    cache_key = make_cache_key(body.question_id, body.selected_option, body.question_stem)
     cached = await get_cached_response(cache_key)
     is_streaming = "text/event-stream" in request.headers.get("accept", "")
 

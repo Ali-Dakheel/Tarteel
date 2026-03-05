@@ -9,9 +9,9 @@ class BaseRequest(BaseModel):
 
 
 class ExplainRequest(BaseRequest):
-    question_id: int
-    selected_option: int = Field(ge=0, le=3)
-    lesson_id: int
+    question_id: int | None = None
+    selected_option: int | None = Field(default=None, ge=0, le=3)
+    lesson_id: int | None = None
     domain: str
     question_stem: str
 

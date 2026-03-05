@@ -22,9 +22,16 @@ async def close_redis() -> None:
         await _redis.aclose()
 
 
-def make_cache_key(question_id: int, selected_option: int) -> str:
-    """Canonical cache key — must match Laravel's hash('sha256', $question_id.':'.$selected_option)."""
-    raw = f"{question_id}:{selected_option}"
+def make_cache_key(
+    question_id: int | None,
+    selected_option: int | None,
+    question_stem: str = "",
+) -> str:
+    """Canonical cache key. For free-form tutor queries (no question_id) uses question_stem."""
+    if question_id is not None:
+        raw = f"{question_id}:{selected_option}"
+    else:
+        raw = f"freeform:{question_stem.strip().lower()}"
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
