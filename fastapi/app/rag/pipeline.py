@@ -9,7 +9,7 @@ from app.database import fetch_chunks_by_ids, get_connection
 from app.prompts import build_user_message, get_system_prompt, should_use_think_mode
 from app.rag.embeddings import embed_query
 from app.rag.generator import assemble_context, format_chunk_with_source, generate_full, generate_stream
-from app.rag.reranker import rerank
+from app.rag.hyde import generate_hypothesis
 from app.rag.retrieval import retrieve
 from app.schemas import Chunk, ExplainRequest
 
@@ -32,10 +32,13 @@ async def _run_rag_stages(
     # Wider retrieval window when searching all domains
     retrieval_limit = 40 if search_all_domains else 25
 
-    # Stage 2: Embed the question stem
-    query_embedding = await embed_query(request.question_stem, client)
+    # Stage 2: HyDE — generate a hypothetical answer, embed it for vector search.
+    # BM25 uses the original question (exact keywords); vector uses the hypothesis
+    # (declarative text matches book passages far better than question vectors).
+    hypothesis = await generate_hypothesis(request.question_stem, client)
+    query_embedding = await embed_query(hypothesis, client)
 
-    # Stage 3: BM25 + vector retrieval → RRF fusion
+    # Stage 3: BM25 (original question) + vector (hypothesis embedding) → RRF fusion
     async with get_connection() as conn:
         rrf_results = await retrieve(
             query=request.question_stem,
@@ -53,9 +56,17 @@ async def _run_rag_stages(
     id_to_chunk = {row["id"]: Chunk(**row) for row in raw_chunks}
     chunks_ordered = [id_to_chunk[cid] for cid in chunk_ids_ranked if cid in id_to_chunk]
 
-    # Stage 5: Rerank → top 5, assemble context with source citations
-    reranked = await rerank(query=request.question_stem, chunks=chunks_ordered, client=client, top_k=5)
-    top_chunks = [chunk for chunk, _ in reranked]
+    # Stage 5: Cosine similarity rerank using stored embeddings (single SQL query).
+    # Replaces the slow, unreliable LLM-based reranker. Top 8 chunks sent to generator.
+    vector_literal = f"[{','.join(str(x) for x in query_embedding)}]"
+    async with get_connection() as conn:
+        dist_rows = await conn.fetch(
+            f"SELECT id, (embedding <=> '{vector_literal}'::vector) AS distance "
+            "FROM pmp_chunks WHERE id = ANY($1::int[])",
+            [c.id for c in chunks_ordered],
+        )
+    id_to_dist = {row["id"]: float(row["distance"]) for row in dist_rows}
+    top_chunks = sorted(chunks_ordered, key=lambda c: id_to_dist.get(c.id, 1.0))[:8]
 
     # Format each chunk with its source/page prefix for citation
     chunk_texts = [

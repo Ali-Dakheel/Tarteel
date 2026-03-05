@@ -44,6 +44,14 @@ CHUNK_OVERLAP_WORDS = 40
 BATCH_SIZE = 8
 DATA_DIR = Path(__file__).parent.parent / "data"
 
+# Human-readable display names for source PDFs shown in citations
+_SOURCE_DISPLAY_NAMES: dict[str, str] = {
+    "dokumen.pub_pmbok-2025-8.pdf": "PMBOK 8th Edition",
+    "agile-practice-guide.pdf": "Agile Practice Guide",
+    "New-PMP-Examination-Content-Outline-2026.pdf": "PMI ECO 2026",
+    "pmi-code-of-ethics.pdf": "PMI Code of Ethics",
+}
+
 # ---------------------------------------------------------------------------
 # Domain detection
 # ---------------------------------------------------------------------------
@@ -160,24 +168,63 @@ def _extract_visible_text(page: fitz.Page) -> str:
     return "\n".join(parts)
 
 
-def extract_pages(pdf_path: Path) -> list[tuple[int, str]]:
+def _detect_header(page: fitz.Page) -> str | None:
     """
-    Return [(page_num, cleaned_text), ...] skipping image-only and unrecoverable pages.
-    Uses PyMuPDF with color filtering to exclude hidden OCR text layers.
+    Return the first large-font short line on the page — likely a section header.
+    PMBOK body text is ~10-11pt; section headers are typically >=13pt.
     """
-    pages: list[tuple[int, str]] = []
+    for block in page.get_text("dict")["blocks"]:
+        if block["type"] != 0:
+            continue
+        for line in block["lines"]:
+            for span in line["spans"]:
+                text = span["text"].strip()
+                if text and len(text) <= 120 and span["size"] >= 13:
+                    return text
+    return None
 
-    with fitz.open(str(pdf_path)) as doc:
-        for i, page in enumerate(doc, start=1):
-            try:
-                raw = _extract_visible_text(page)
-                cleaned = clean_text(raw)
-                if len(cleaned.split()) < 20:
-                    continue  # image-only / near-empty
-                pages.append((i, cleaned))
-            except Exception:
-                continue
 
+def _extract_printed_page_num(page: fitz.Page) -> int | None:
+    """
+    Extract the printed page number from the page footer.
+    Clips to the bottom 8% of the page. Strips 4-digit years (e.g. "2025" from
+    the PMI copyright notice) before matching, so only 1-999 book page numbers match.
+    Returns None if not found (front matter, image pages, etc.).
+    """
+    page_height = page.rect.height
+    clip = fitz.Rect(0, page_height * 0.92, page.rect.width, page_height)
+    footer_text = page.get_text("text", clip=clip).strip()
+    # Strip years (1900-2099) so PMI copyright "© 2025" doesn't get picked up
+    footer_text = re.sub(r'\b(19|20)\d{2}\b', '', footer_text)
+    m = re.search(r'\b([1-9]\d{0,2})\b', footer_text)  # 1-999 only
+    return int(m.group(1)) if m else None
+
+
+def extract_pages(pdf_path: Path) -> list[tuple[int, fitz.Page, str]]:
+    """
+    Return [(page_num, page_obj, cleaned_text), ...] skipping image-only pages.
+    page_num is the printed book page number from the footer; falls back to the
+    PDF page index when no printed number is found (e.g. front matter).
+    page_obj is kept alive so _detect_header() can be called on it in ingest_pdf().
+    """
+    doc = fitz.open(str(pdf_path))
+    pages: list[tuple[int, fitz.Page, str]] = []
+
+    for i, page in enumerate(doc, start=1):
+        try:
+            # Extract printed page number BEFORE clean_text strips standalone digits
+            printed_page = _extract_printed_page_num(page)
+            raw = _extract_visible_text(page)
+            cleaned = clean_text(raw)
+            if len(cleaned.split()) < 20:
+                continue  # image-only / near-empty
+            page_label = printed_page if printed_page is not None else i
+            pages.append((page_label, page, cleaned))
+        except Exception:
+            continue
+
+    # Note: doc is intentionally NOT closed here — page objects reference it.
+    # The caller (ingest_pdf) owns the doc lifetime via the pages list.
     return pages
 
 
@@ -190,17 +237,27 @@ def split_into_chunks(
     size: int = CHUNK_SIZE_WORDS,
     overlap: int = CHUNK_OVERLAP_WORDS,
 ) -> list[str]:
-    words = text.split()
-    if not words:
+    """
+    Paragraph-aware chunker. Splits on blank lines first so bullet lists and
+    numbered paragraphs stay intact. Overlaps by carrying the last paragraph
+    into the next chunk for continuity.
+    """
+    paragraphs = [p.strip() for p in re.split(r'\n{2,}', text) if p.strip()]
+    if not paragraphs:
         return []
     chunks: list[str] = []
-    start = 0
-    while start < len(words):
-        end = min(start + size, len(words))
-        chunks.append(" ".join(words[start:end]))
-        if end == len(words):
-            break
-        start += size - overlap
+    current: list[str] = []
+    current_words = 0
+    for para in paragraphs:
+        pw = len(para.split())
+        if current_words + pw > size and current:
+            chunks.append('\n\n'.join(current))
+            current = current[-1:]  # overlap: carry last paragraph
+            current_words = len(current[0].split()) if current else 0
+        current.append(para)
+        current_words += pw
+    if current:
+        chunks.append('\n\n'.join(current))
     return chunks
 
 
@@ -237,12 +294,14 @@ async def upsert_pdf_chunks(
         "DELETE FROM pmp_chunks WHERE metadata->>'source' = $1", source
     )
 
+    display_source = _SOURCE_DISPLAY_NAMES.get(source, source)
+
     inserted = 0
     for idx, ((content, domain, page), embedding) in enumerate(
         zip(chunks_with_meta, embeddings)
     ):
         vector_literal = f"[{','.join(str(x) for x in embedding)}]"
-        metadata = json.dumps({"domain": domain, "source": source, "page": page})
+        metadata = json.dumps({"domain": domain, "source": display_source, "page": page})
         await conn.execute(
             """
             INSERT INTO pmp_chunks (lesson_id, content, metadata, chunk_index, created_at, updated_at)
@@ -282,17 +341,25 @@ async def ingest_pdf(
 
     print(f"    {len(pages)} pages with text", flush=True)
 
-    # Build chunk list with domain labels
+    # Build chunk list with domain labels and contextual chunk headers
     chunks_with_meta: list[ChunkMeta] = []
     current_domain = "process"  # default start
+    current_header = ""  # carries the latest detected section header forward
 
-    for page_num, page_text in pages:
+    for page_num, page_obj, page_text in pages:
         if is_eco:
             current_domain = detect_domain_by_header(page_text, current_domain)
 
+        # Update running header if this page starts a new section
+        detected = _detect_header(page_obj)
+        if detected:
+            current_header = detected
+
         for chunk_text in split_into_chunks(page_text):
             domain = current_domain if is_eco else detect_domain_by_keywords(chunk_text)
-            chunks_with_meta.append((chunk_text, domain, page_num))
+            # Prepend section header so embeddings carry document context (Contextual Chunk Headers)
+            full_chunk = f"[{current_header}]\n{chunk_text}" if current_header else chunk_text
+            chunks_with_meta.append((full_chunk, domain, page_num))
 
     if not chunks_with_meta:
         print("    ⚠ No chunks generated — skipping")

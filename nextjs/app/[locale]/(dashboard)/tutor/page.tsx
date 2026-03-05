@@ -1,96 +1,153 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { AiExplanation } from '@/components/learn/AiExplanation';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Send, BookOpen } from 'lucide-react';
 
-const DOMAINS = ['people', 'process', 'business-environment'] as const;
+type Message = {
+  id: number;
+  question: string; // frozen snapshot at submit time — never mutated
+};
+
+const STARTERS = [
+  'What do projects enable organizations to do?',
+  'What is the difference between a project and operations?',
+  'What is the role of the project sponsor?',
+];
 
 export default function TutorPage() {
   const t = useTranslations('tutor');
 
-  const [stem, setStem] = useState('');
-  const [domain, setDomain] = useState<string>('process');
-  const [submitted, setSubmitted] = useState(false);
-  const [key, setKey] = useState(0); // remount AiExplanation on new question
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const scrollToBottom = () =>
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+
+  const submit = (question: string) => {
+    const trimmed = question.trim();
+    if (!trimmed || isStreaming) return;
+    setMessages((prev) => [...prev, { id: Date.now(), question: trimmed }]);
+    setInput('');
+    setIsStreaming(true);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      setTimeout(() => textareaRef.current?.focus(), 0);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!stem.trim()) return;
-    setKey((k) => k + 1);
-    setSubmitted(true);
+    submit(input);
   };
 
-  const handleReset = () => {
-    setStem('');
-    setSubmitted(false);
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submit(input);
+    }
   };
+
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    e.target.style.height = 'auto';
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold">{t('title')}</h1>
-        <p className="mt-1 text-muted-foreground">{t('subtitle')}</p>
+    <div className="flex flex-col h-[calc(100vh-3.5rem)]">
+
+      {/* ── Messages ─────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-4">
+            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <BookOpen className="h-7 w-7 text-primary" />
+            </div>
+            <div>
+              <p className="text-lg font-semibold">{t('title')}</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">{t('subtitle')}</p>
+            </div>
+            <div className="flex flex-wrap gap-2 justify-center mt-2">
+              {STARTERS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => submit(s)}
+                  className="text-xs px-3 py-1.5 rounded-full border border-border hover:bg-muted transition-colors cursor-pointer"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="max-w-3xl mx-auto px-4 py-6 space-y-8">
+            {messages.map((msg, idx) => (
+              <div key={msg.id} className="space-y-4">
+                {/* User bubble — right aligned */}
+                <div className="flex justify-end">
+                  <div className="bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[80%] text-sm leading-relaxed">
+                    {msg.question}
+                  </div>
+                </div>
+
+                {/* AI response — msg.question is frozen, never re-triggers on input change */}
+                <AiExplanation
+                  payload={{
+                    question_id: null,
+                    selected_option: null,
+                    lesson_id: null,
+                    domain: 'process',
+                    question_stem: msg.question,
+                  }}
+                  autoStart
+                  variant="chat"
+                  onScrollNeeded={scrollToBottom}
+                  onDone={idx === messages.length - 1 ? () => setIsStreaming(false) : undefined}
+                />
+              </div>
+            ))}
+            <div ref={bottomRef} />
+          </div>
+        )}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label>{t('domainLabel')}</Label>
-          <Select value={domain} onValueChange={setDomain}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={t('domainPlaceholder')} />
-            </SelectTrigger>
-            <SelectContent>
-              {DOMAINS.map((d) => (
-                <SelectItem key={d} value={d}>
-                  {t(`domains.${d}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="question">{t('placeholder')}</Label>
+      {/* ── Input bar ────────────────────────────────────── */}
+      <div className="border-t bg-background/95 backdrop-blur px-4 py-4">
+        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto flex gap-2 items-end">
           <Textarea
-            id="question"
-            value={stem}
-            onChange={(e) => setStem(e.target.value)}
+            ref={textareaRef}
+            value={input}
+            onChange={handleInput}
+            onKeyDown={handleKeyDown}
             placeholder={t('placeholder')}
-            rows={4}
-            className="resize-none"
+            rows={1}
+            className="resize-none flex-1 min-h-[44px] max-h-[200px] overflow-y-auto py-3"
+            disabled={isStreaming}
           />
-        </div>
-
-        <div className="flex gap-2">
-          <Button type="submit" disabled={!stem.trim()}>
-            {t('submit')}
+          <Button
+            type="submit"
+            size="icon"
+            className="h-[44px] w-[44px] flex-shrink-0"
+            disabled={!input.trim() || isStreaming}
+          >
+            <Send className="h-4 w-4" />
           </Button>
-          {submitted && (
-            <Button type="button" variant="outline" onClick={handleReset}>
-              {t('domainPlaceholder')}
-            </Button>
-          )}
-        </div>
-      </form>
-
-      {submitted && (
-        <AiExplanation
-          key={key}
-          payload={{
-            question_id: null,
-            selected_option: null,
-            lesson_id: null,
-            domain,
-            question_stem: stem,
-          }}
-          autoStart
-        />
-      )}
+        </form>
+        <p className="text-xs text-muted-foreground text-center mt-2">
+          Enter ↵ to send · Shift+Enter for new line
+        </p>
+      </div>
     </div>
   );
 }

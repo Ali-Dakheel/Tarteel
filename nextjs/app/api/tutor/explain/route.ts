@@ -9,8 +9,6 @@ export async function POST(req: Request) {
   }
 
   const body = await req.text();
-  console.log('[tutor/explain] body sent to Laravel:', body);
-  console.log('[tutor/explain] token:', token.slice(0, 10) + '...');
 
   const upstream = await fetch(`${LARAVEL_URL}/api/v1/tutor/explain`, {
     method: 'POST',
@@ -23,7 +21,6 @@ export async function POST(req: Request) {
 
   if (!upstream.ok || !upstream.body) {
     const errText = await upstream.text().catch(() => 'AI service unavailable');
-    console.error('[tutor/explain] upstream error', upstream.status, errText);
     return new Response(errText, {
       status: upstream.status,
       headers: { 'Content-Type': upstream.headers.get('Content-Type') ?? 'application/json' },
