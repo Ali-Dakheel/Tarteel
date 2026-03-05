@@ -1,0 +1,96 @@
+{
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "name": "Full Name",
+    "confirmPassword": "Confirm Password",
+    "loginButton": "Login",
+    "registerButton": "Create Account",
+    "loginTitle": "Welcome back",
+    "loginSubtitle": "Login to your Tarteel account",
+    "registerTitle": "Create your account",
+    "registerSubtitle": "Start your PMP certification journey",
+    "alreadyHaveAccount": "Already have an account?",
+    "dontHaveAccount": "Don't have an account?",
+    "loginLink": "Login",
+    "registerLink": "Register"
+  },
+  "nav": {
+    "home": "Home",
+    "tutor": "AI Tutor",
+    "profile": "Profile"
+  },
+  "domains": {
+    "title": "PMP Domains",
+    "subtitle": "Choose a domain to start learning",
+    "lessons": "lessons",
+    "progress": "progress",
+    "continue": "Continue",
+    "start": "Start Learning",
+    "completed": "completed"
+  },
+  "lesson": {
+    "questions": "Practice Questions",
+    "question": "Question",
+    "of": "of",
+    "submitAnswer": "Submit Answer",
+    "correct": "Correct!",
+    "incorrect": "Incorrect",
+    "yourAnswer": "Your answer",
+    "correctAnswer": "Correct answer",
+    "explanation": "AI Explanation",
+    "loadingExplanation": "Generating explanation...",
+    "markComplete": "Mark as Complete",
+    "nextLesson": "Next Lesson",
+    "backToDomain": "Back to Domain",
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    },
+    "earnedXp": "+{xp} XP"
+  },
+  "tutor": {
+    "title": "AI Tutor",
+    "subtitle": "Ask any PMP question in Arabic or English",
+    "placeholder": "Type your question...",
+    "domainLabel": "Domain",
+    "domainPlaceholder": "Select domain",
+    "submit": "Ask",
+    "loading": "Thinking...",
+    "error": "Failed to get explanation. Please try again.",
+    "domains": {
+      "people": "People",
+      "process": "Process",
+      "business-environment": "Business Environment"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "xp": "XP Points",
+    "streak": "Current Streak",
+    "longestStreak": "Longest Streak",
+    "days": "days",
+    "subscription": "Subscription",
+    "free": "Free",
+    "pro": "Pro",
+    "trial": "Trial",
+    "upgradeToPro": "Upgrade to Pro — $14.99/mo",
+    "language": "Language",
+    "arabic": "العربية",
+    "english": "English"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "back": "Back",
+    "xp": "XP",
+    "free": "Free",
+    "pro": "Pro Required",
+    "locked": "Locked"
+  }
+}

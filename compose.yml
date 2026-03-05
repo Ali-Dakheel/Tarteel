@@ -124,6 +124,22 @@ services:
     networks:
       - tarteel
 
+  nextjs:
+    build:
+      context: ./nextjs
+      dockerfile: Dockerfile
+    container_name: tarteel_nextjs
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      LARAVEL_URL: http://laravel:8000
+    depends_on:
+      - laravel
+    networks:
+      - tarteel
+
 volumes:
   postgres_data:
   redis_data:

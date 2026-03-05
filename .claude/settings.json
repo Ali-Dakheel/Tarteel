@@ -6,5 +6,8 @@
       "Bash(/c/Users/User/.config/herd/bin/php84/php artisan tinker --execute=\"echo ''Users: ''.App\\\\Models\\\\User::count\\(\\).PHP_EOL.''Domains: ''.App\\\\Models\\\\Domain::count\\(\\).PHP_EOL.''Lessons: ''.App\\\\Models\\\\Lesson::count\\(\\).PHP_EOL.''Questions: ''.App\\\\Models\\\\Question::count\\(\\).PHP_EOL.''Free lessons: ''.App\\\\Models\\\\Lesson::where\\(''is_free'',true\\)->count\\(\\);\")",
       "WebFetch(domain:github.com)"
     ]
+  },
+  "enabledPlugins": {
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true
   }
 }

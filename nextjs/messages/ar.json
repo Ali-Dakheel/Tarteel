@@ -1,0 +1,96 @@
+{
+  "auth": {
+    "login": "تسجيل الدخول",
+    "register": "إنشاء حساب",
+    "logout": "تسجيل الخروج",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "name": "الاسم الكامل",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "loginButton": "دخول",
+    "registerButton": "إنشاء حساب",
+    "loginTitle": "مرحباً بعودتك",
+    "loginSubtitle": "سجّل دخولك إلى منصة تَرتيل",
+    "registerTitle": "أنشئ حسابك",
+    "registerSubtitle": "ابدأ رحلتك نحو شهادة PMP",
+    "alreadyHaveAccount": "لديك حساب بالفعل؟",
+    "dontHaveAccount": "ليس لديك حساب؟",
+    "loginLink": "سجّل الدخول",
+    "registerLink": "إنشاء حساب"
+  },
+  "nav": {
+    "home": "الرئيسية",
+    "tutor": "المعلم الذكي",
+    "profile": "الملف الشخصي"
+  },
+  "domains": {
+    "title": "مجالات PMP",
+    "subtitle": "اختر مجالاً لبدء التعلم",
+    "lessons": "درس",
+    "progress": "التقدم",
+    "continue": "متابعة",
+    "start": "ابدأ التعلم",
+    "completed": "مكتمل"
+  },
+  "lesson": {
+    "questions": "أسئلة التدريب",
+    "question": "سؤال",
+    "of": "من",
+    "submitAnswer": "تأكيد الإجابة",
+    "correct": "إجابة صحيحة!",
+    "incorrect": "إجابة خاطئة",
+    "yourAnswer": "إجابتك",
+    "correctAnswer": "الإجابة الصحيحة",
+    "explanation": "شرح المعلم الذكي",
+    "loadingExplanation": "جارٍ إنشاء الشرح...",
+    "markComplete": "تم إنهاء الدرس",
+    "nextLesson": "الدرس التالي",
+    "backToDomain": "العودة للمجال",
+    "difficulty": {
+      "easy": "سهل",
+      "medium": "متوسط",
+      "hard": "صعب"
+    },
+    "earnedXp": "+{xp} نقطة"
+  },
+  "tutor": {
+    "title": "المعلم الذكي",
+    "subtitle": "اسأل عن أي موضوع في PMP بالعربية أو الإنجليزية",
+    "placeholder": "اكتب سؤالك هنا...",
+    "domainLabel": "المجال",
+    "domainPlaceholder": "اختر المجال",
+    "submit": "اسأل",
+    "loading": "جارٍ التفكير...",
+    "error": "حدث خطأ. يرجى المحاولة مجدداً.",
+    "domains": {
+      "people": "الأفراد",
+      "process": "العمليات",
+      "business-environment": "بيئة الأعمال"
+    }
+  },
+  "profile": {
+    "title": "الملف الشخصي",
+    "xp": "نقاط الخبرة",
+    "streak": "التتابع الحالي",
+    "longestStreak": "أطول تتابع",
+    "days": "يوم",
+    "subscription": "الاشتراك",
+    "free": "مجاني",
+    "pro": "مميز",
+    "trial": "تجريبي",
+    "upgradeToPro": "ترقية إلى المميز — 14.99$/شهر",
+    "language": "اللغة",
+    "arabic": "العربية",
+    "english": "English"
+  },
+  "common": {
+    "loading": "جارٍ التحميل...",
+    "error": "حدث خطأ ما",
+    "retry": "حاول مجدداً",
+    "back": "رجوع",
+    "xp": "نقطة",
+    "free": "مجاني",
+    "pro": "يتطلب الاشتراك المميز",
+    "locked": "مقفل"
+  }
+}
