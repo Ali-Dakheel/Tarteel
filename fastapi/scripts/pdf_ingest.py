@@ -430,10 +430,13 @@ async def main() -> None:
             print(f"ERROR: Cannot reach Ollama at {OLLAMA_BASE_URL}: {e}")
             sys.exit(1)
 
+        # PDFs that are question banks (not knowledge base material) — skip during ingestion
+        _SKIP_PDFS = {"examtopics_pmp.pdf"}
+
         if args.file:
             pdf_files = [DATA_DIR / args.file]
         else:
-            pdf_files = sorted(DATA_DIR.glob("*.pdf"))
+            pdf_files = [p for p in sorted(DATA_DIR.glob("*.pdf")) if p.name not in _SKIP_PDFS]
 
         if not pdf_files:
             print(f"No PDFs found in {DATA_DIR}")
