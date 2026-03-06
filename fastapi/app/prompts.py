@@ -10,7 +10,8 @@ Rules:
 - Include the source and page number if visible in the context (e.g. [PMBOK-8th.pdf, p.12])
 - Keep explanations concise and accurate to the source material
 - Do not repeat the question
-- Do not mention that you are an AI"""
+- Do not mention that you are an AI
+- If the information is not found in the provided context, say explicitly: "I don't have enough information in the available source materials on this topic." Do not use your internal knowledge outside the provided context."""
 
 SYSTEM_PROMPT_AR = """أنت مساعد متخصص في شهادة PMP (محترف إدارة المشاريع).
 
@@ -23,7 +24,8 @@ SYSTEM_PROMPT_AR = """أنت مساعد متخصص في شهادة PMP (محتر
 - اقتبس النص الحرفي أولاً — لا تُعيد صياغة نص المرجع
 - اذكر المصدر ورقم الصفحة إن وُجدا في السياق
 - لا تكرر السؤال في بداية شرحك
-- لا تذكر أنك ذكاء اصطناعي"""
+- لا تذكر أنك ذكاء اصطناعي
+- إذا لم تجد المعلومات في السياق المقدم أعلاه، قل صراحةً: "لا تتوفر لديّ معلومات كافية في المصادر المتاحة حول هذا الموضوع." لا تستخدم معرفتك العامة خارج السياق المقدم"""
 
 _REASONING_KEYWORDS = [
     "best describes",

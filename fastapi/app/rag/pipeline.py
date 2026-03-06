@@ -10,8 +10,23 @@ from app.prompts import build_user_message, get_system_prompt, should_use_think_
 from app.rag.embeddings import embed_query
 from app.rag.generator import assemble_context, format_chunk_with_source, generate_full, generate_stream
 from app.rag.hyde import generate_hypothesis
+from app.rag.query_expansion import expand_query
 from app.rag.retrieval import retrieve
 from app.schemas import Chunk, ExplainRequest
+
+
+def _merge_rrf(
+    primary: list[tuple[int, float]],
+    secondary: list[tuple[int, float]],
+) -> list[tuple[int, float]]:
+    """
+    Merge two RRF result lists by summing scores for shared chunk IDs.
+    Result is sorted descending by combined score.
+    """
+    scores: dict[int, float] = {chunk_id: score for chunk_id, score in primary}
+    for chunk_id, score in secondary:
+        scores[chunk_id] = scores.get(chunk_id, 0.0) + score
+    return sorted(scores.items(), key=lambda x: x[1], reverse=True)
 
 
 async def _run_rag_stages(
@@ -32,23 +47,49 @@ async def _run_rag_stages(
     # Wider retrieval window when searching all domains
     retrieval_limit = 40 if search_all_domains else 25
 
-    # Stage 2: HyDE — generate a hypothetical answer, embed it for vector search.
-    # BM25 uses the original question (exact keywords); vector uses the hypothesis
-    # (declarative text matches book passages far better than question vectors).
-    hypothesis = await generate_hypothesis(request.question_stem, client)
-    query_embedding = await embed_query(hypothesis, client)
+    # Stage 2: HyDE + multi-query expansion (run in parallel — independent LLM calls).
+    # HyDE generates a hypothetical book passage → used for primary vector search.
+    # expand_query generates 2 rephrased questions → extra vector signal for recall,
+    # especially important for Arabic/English code-switching queries.
+    hypothesis, expanded_queries = await asyncio.gather(
+        generate_hypothesis(request.question_stem, client),
+        expand_query(request.question_stem, client),
+    )
 
-    # Stage 3: BM25 (original question) + vector (hypothesis embedding) → RRF fusion
+    # Embed hypothesis (primary vector) and each expansion (secondary vectors).
+    # Embeddings are independent — run concurrently.
+    expansion_texts = expanded_queries[1:]  # skip original; BM25 covers it already
+    embedding_tasks = [embed_query(hypothesis, client)] + [
+        embed_query(q, client) for q in expansion_texts
+    ]
+    embeddings = await asyncio.gather(*embedding_tasks)
+    primary_embedding = embeddings[0]
+    expansion_embeddings = list(embeddings[1:])
+
+    # Stage 3: BM25 (original question) + vector (hypothesis) → primary RRF results.
+    # Then merge additional vector retrievals from query expansions.
     async with get_connection() as conn:
         rrf_results = await retrieve(
             query=request.question_stem,
-            embedding=query_embedding,
+            embedding=primary_embedding,
             domain=domain,
             lesson_id=lesson_id,
             conn=conn,
             retrieval_limit=retrieval_limit,
             search_all_domains=search_all_domains,
         )
+        # Merge each expansion's vector results into the RRF score map
+        for exp_emb in expansion_embeddings:
+            extra = await retrieve(
+                query=request.question_stem,
+                embedding=exp_emb,
+                domain=domain,
+                lesson_id=lesson_id,
+                conn=conn,
+                retrieval_limit=retrieval_limit,
+                search_all_domains=search_all_domains,
+            )
+            rrf_results = _merge_rrf(rrf_results, extra)
 
     # Stage 4: Fetch full chunk rows, re-sort to preserve RRF ranking order
     chunk_ids_ranked = [chunk_id for chunk_id, _ in rrf_results]
@@ -56,17 +97,8 @@ async def _run_rag_stages(
     id_to_chunk = {row["id"]: Chunk(**row) for row in raw_chunks}
     chunks_ordered = [id_to_chunk[cid] for cid in chunk_ids_ranked if cid in id_to_chunk]
 
-    # Stage 5: Cosine similarity rerank using stored embeddings (single SQL query).
-    # Replaces the slow, unreliable LLM-based reranker. Top 8 chunks sent to generator.
-    vector_literal = f"[{','.join(str(x) for x in query_embedding)}]"
-    async with get_connection() as conn:
-        dist_rows = await conn.fetch(
-            f"SELECT id, (embedding <=> '{vector_literal}'::vector) AS distance "
-            "FROM pmp_chunks WHERE id = ANY($1::int[])",
-            [c.id for c in chunks_ordered],
-        )
-    id_to_dist = {row["id"]: float(row["distance"]) for row in dist_rows}
-    top_chunks = sorted(chunks_ordered, key=lambda c: id_to_dist.get(c.id, 1.0))[:8]
+    # Stage 5: Take top 8 from merged RRF order.
+    top_chunks = chunks_ordered[:8]
 
     # Format each chunk with its source/page prefix for citation
     chunk_texts = [

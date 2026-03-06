@@ -17,8 +17,9 @@ async def generate_hypothesis(question: str, client: httpx.AsyncClient) -> str:
     Falls back to the original question on any error to avoid breaking the pipeline.
     """
     prompt = (
-        f"Write one short paragraph (2-3 sentences) from a PMP textbook that directly "
-        f"answers: '{question}'. Output ONLY the paragraph text, no preamble. /no_think"
+        f"Write one short paragraph (2-3 sentences) from a PMP reference book that directly "
+        f"answers: '{question}'. "
+        "Output ONLY the paragraph text, no preamble, no markdown. /no_think"
     )
     try:
         r = await client.post(
@@ -27,7 +28,8 @@ async def generate_hypothesis(question: str, client: httpx.AsyncClient) -> str:
                 "model": "qwen3:8b",
                 "prompt": prompt,
                 "stream": False,
-                "options": {"num_predict": 100, "temperature": 0.2},
+                "think": False,
+                "options": {"num_predict": 150, "temperature": 0.2},
             },
             timeout=30.0,
         )

@@ -12,6 +12,9 @@ dependencies = [
     "pydantic-settings>=2.13.1",
     "pdfplumber>=0.11",
     "pymupdf>=1.24",
+    "beautifulsoup4>=4.12",
+    "requests>=2.32",
+    "playwright>=1.49",
 ]
 
 [dependency-groups]

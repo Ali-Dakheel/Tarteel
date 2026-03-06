@@ -47,9 +47,9 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 # Human-readable display names for source PDFs shown in citations
 _SOURCE_DISPLAY_NAMES: dict[str, str] = {
     "dokumen.pub_pmbok-2025-8.pdf": "PMBOK 8th Edition",
-    "agile-practice-guide.pdf": "Agile Practice Guide",
+    "Agile-Practice-Guide.pdf": "Agile Practice Guide",
     "New-PMP-Examination-Content-Outline-2026.pdf": "PMI ECO 2026",
-    "pmi-code-of-ethics.pdf": "PMI Code of Ethics",
+    "pmi code of ethics.pdf": "PMI Code of Ethics",
 }
 
 # ---------------------------------------------------------------------------
@@ -289,12 +289,14 @@ async def upsert_pdf_chunks(
     chunks_with_meta: list[ChunkMeta],
     embeddings: list[list[float]],
 ) -> int:
-    # Idempotent: remove any prior chunks for this source file
-    await conn.execute(
-        "DELETE FROM pmp_chunks WHERE metadata->>'source' = $1", source
-    )
-
     display_source = _SOURCE_DISPLAY_NAMES.get(source, source)
+
+    # Idempotent: remove any prior chunks for this source file.
+    # Delete by both raw filename and display name to handle schema migrations.
+    await conn.execute(
+        "DELETE FROM pmp_chunks WHERE metadata->>'source' = ANY($1::text[])",
+        [source, display_source],
+    )
 
     inserted = 0
     for idx, ((content, domain, page), embedding) in enumerate(
@@ -325,12 +327,20 @@ async def upsert_pdf_chunks(
 # Per-PDF orchestration
 # ---------------------------------------------------------------------------
 
+_DOMAIN_LABELS: dict[str, str] = {
+    "people": "People Domain",
+    "process": "Process Domain",
+    "business-environment": "Business Environment Domain",
+}
+
+
 async def ingest_pdf(
     pdf_path: Path,
     conn: asyncpg.Connection,
     client: httpx.AsyncClient,
 ) -> int:
     source = pdf_path.name
+    display_source = _SOURCE_DISPLAY_NAMES.get(source, source)
     is_eco = _is_eco_file(source)
     print(f"\n  [{source}]")
 
@@ -357,8 +367,14 @@ async def ingest_pdf(
 
         for chunk_text in split_into_chunks(page_text):
             domain = current_domain if is_eco else detect_domain_by_keywords(chunk_text)
-            # Prepend section header so embeddings carry document context (Contextual Chunk Headers)
-            full_chunk = f"[{current_header}]\n{chunk_text}" if current_header else chunk_text
+            # Build richer contextual prefix: Source | Section | Domain
+            # bge-m3 uses this to disambiguate chunks from different books/sections.
+            domain_label = _DOMAIN_LABELS.get(domain, "")
+            if current_header:
+                prefix = f"[{display_source} | {current_header} | {domain_label}]"
+            else:
+                prefix = f"[{display_source} | {domain_label}]"
+            full_chunk = f"{prefix}\n{chunk_text}"
             chunks_with_meta.append((full_chunk, domain, page_num))
 
     if not chunks_with_meta:
