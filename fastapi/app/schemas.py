@@ -12,7 +12,7 @@ class ExplainRequest(BaseRequest):
     question_id: int | None = None
     selected_option: int | None = Field(default=None, ge=0, le=3)
     lesson_id: int | None = None
-    domain: str
+    domain: str | None = None
     question_stem: str
 
 

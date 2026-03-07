@@ -7,23 +7,25 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ExplainRequest;
 use App\Models\AiResponseCache;
-use GuzzleHttp\Client;
+use App\Services\FastApiClient;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TutorController extends Controller
 {
+    public function __construct(private readonly FastApiClient $fastApi) {}
+
     public function explain(ExplainRequest $request): StreamedResponse
     {
         $this->authorize('use-tutor');
 
         $payload = $request->validated();
-        $cacheKey = hash('sha256', ($payload['question_id'] ?? 'null').':'.($payload['selected_option'] ?? 'null'));
+        $cacheKey = AiResponseCache::makeKey($payload);
 
-        $cached = AiResponseCache::query()
+        $cached = AiResponseCache::active()
             ->where('query_hash', $cacheKey)
-            ->where('expires_at', '>', now())
             ->first();
 
         if ($cached) {
@@ -40,34 +42,19 @@ class TutorController extends Controller
             ]);
         }
 
-        $fastapiUrl = config('services.fastapi.url');
-        $internalKey = config('services.fastapi.key');
-
-        return response()->stream(function () use ($payload, $fastapiUrl, $internalKey): void {
-            $client = new Client(['timeout' => 120]);
-
+        return response()->stream(function () use ($payload): void {
             try {
-                $response = $client->request('POST', $fastapiUrl.'/explain', [
-                    'headers' => [
-                        'X-Internal-Key' => $internalKey,
-                        'Accept' => 'text/event-stream',
-                    ],
-                    'json' => $payload,
-                    'stream' => true,
-                ]);
-
-                $body = $response->getBody();
-
-                while (! $body->eof()) {
-                    $chunk = $body->read(1024);
-                    if ($chunk !== '') {
-                        echo $chunk;
-                        if (ob_get_level() > 0) ob_flush();
-                        flush();
-                    }
-                }
+                $this->fastApi->streamExplain($payload, function (string $chunk): void {
+                    echo $chunk;
+                    if (ob_get_level() > 0) ob_flush();
+                    flush();
+                });
             } catch (GuzzleException $e) {
-                echo "data: {\"error\": \"AI service unavailable\"}\n\n";
+                Log::error('TutorController SSE stream failed', [
+                    'error' => $e->getMessage(),
+                    'payload' => $payload,
+                ]);
+                echo "event: error\ndata: {\"error\": \"AI service unavailable\"}\n\n";
                 if (ob_get_level() > 0) ob_flush();
                 flush();
             }

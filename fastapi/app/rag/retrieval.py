@@ -5,7 +5,7 @@ import asyncpg
 
 async def bm25_search(
     query: str,
-    domain: str,
+    domain: str | None,
     lesson_id: int | None,
     limit: int,
     conn: asyncpg.Connection,
@@ -69,15 +69,16 @@ async def bm25_search(
 
 async def vector_search(
     embedding: list[float],
-    domain: str,
+    domain: str | None,
     lesson_id: int | None,
     limit: int,
     conn: asyncpg.Connection,
     search_all_domains: bool = False,
 ) -> list[tuple[int, float]]:
     """pgvector cosine similarity search. Returns (chunk_id, distance) tuples ordered ASC."""
-    # asyncpg can't bind Python list to vector type directly — format as literal string
-    vector_literal = f"[{','.join(str(x) for x in embedding)}]"
+    # asyncpg cannot bind a Python list to the pgvector type natively.
+    # Coerce each value through float() to guarantee numeric-only content before interpolation.
+    vector_literal = f"[{','.join(str(float(x)) for x in embedding)}]"
 
     if lesson_id is not None:
         rows = await conn.fetch(
@@ -144,7 +145,7 @@ def reciprocal_rank_fusion(
 async def retrieve(
     query: str,
     embedding: list[float],
-    domain: str,
+    domain: str | None,
     lesson_id: int | None,
     conn: asyncpg.Connection,
     retrieval_limit: int = 25,

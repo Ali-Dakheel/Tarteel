@@ -2,10 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getLesson, markProgress } from '@/lib/api/lessons';
-import { submitAttempt } from '@/lib/api/questions';
 import { queryKeys } from '@/lib/queryKeys';
 import { LessonContent } from '@/components/learn/LessonContent';
 import { QuestionCard } from '@/components/learn/QuestionCard';
@@ -23,7 +22,7 @@ export default function LessonPage() {
 
   const [currentQ, setCurrentQ] = useState(0);
   const [attempts, setAttempts] = useState<Record<number, QuestionAttempt>>({});
-  const startTime = useRef(Date.now());
+  const [startTime] = useState<number>(() => Date.now());
 
   const {
     data: lesson,
@@ -37,7 +36,7 @@ export default function LessonPage() {
 
   const completeMutation = useMutation({
     mutationFn: () =>
-      markProgress(params.lesson, Math.floor((Date.now() - startTime.current) / 1000)),
+      markProgress(params.lesson, Math.floor((Date.now() - startTime) / 1000)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.progress.all() });
       queryClient.invalidateQueries({ queryKey: queryKeys.lessons.detail(params.lesson) });

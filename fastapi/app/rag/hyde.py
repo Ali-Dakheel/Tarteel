@@ -1,6 +1,10 @@
+import logging
+
 import httpx
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 async def generate_hypothesis(question: str, client: httpx.AsyncClient) -> str:
@@ -36,5 +40,6 @@ async def generate_hypothesis(question: str, client: httpx.AsyncClient) -> str:
         r.raise_for_status()
         hypothesis = r.json().get("response", "").strip()
         return hypothesis if hypothesis else question
-    except Exception:
+    except Exception as e:
+        logger.warning("HyDE failed, falling back to original question: %s", e)
         return question

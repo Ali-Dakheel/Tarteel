@@ -16,7 +16,7 @@ class ProgressController extends Controller
     {
         $progress = $request->user()
             ->progress()
-            ->with('lesson:id,title,slug,domain_id')
+            ->with('lesson.domain:id,slug,name')
             ->get();
 
         return $this->success([

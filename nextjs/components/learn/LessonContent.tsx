@@ -1,6 +1,12 @@
+'use client';
+
+import DOMPurify from 'dompurify';
+
 type Props = { content: string };
 
 export function LessonContent({ content }: Props) {
+  const clean = DOMPurify.sanitize(content);
+
   return (
     <div
       className="prose prose-neutral max-w-none dark:prose-invert
@@ -11,8 +17,7 @@ export function LessonContent({ content }: Props) {
       {/* Technical terms inside Arabic text should be LTR */}
       <div
         className="whitespace-pre-wrap"
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: clean }}
       />
     </div>
   );

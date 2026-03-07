@@ -8,9 +8,13 @@ improving recall especially for Arabic/English code-switching queries.
 
 from __future__ import annotations
 
+import logging
+
 import httpx
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 async def expand_query(question: str, client: httpx.AsyncClient) -> list[str]:
@@ -45,5 +49,6 @@ async def expand_query(question: str, client: httpx.AsyncClient) -> list[str]:
         lines = [l.strip() for l in text.splitlines() if l.strip()]
         extras = lines[:2]
         return [question] + extras if extras else [question]
-    except Exception:
+    except Exception as e:
+        logger.warning("Query expansion failed, falling back to original question: %s", e)
         return [question]

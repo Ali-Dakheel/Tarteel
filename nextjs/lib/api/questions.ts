@@ -1,3 +1,4 @@
+import { parseApiError } from '@/lib/api/errors';
 import type { QuestionAttempt } from '@/types/api';
 
 export async function submitAttempt(
@@ -9,7 +10,9 @@ export async function submitAttempt(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ selected_option: selectedOption }),
   });
-  if (!res.ok) throw new Error('Failed to submit answer');
-  const body = await res.json();
-  return (body as { data: QuestionAttempt }).data;
+  if (!res.ok) {
+    throw new Error(await parseApiError(res, 'Failed to submit answer'));
+  }
+  const body = await res.json() as { data: QuestionAttempt };
+  return body.data;
 }

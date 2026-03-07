@@ -11,12 +11,13 @@ use App\Jobs\GenerateAiExplanationJob;
 use App\Models\Question;
 use App\Models\QuestionAttempt;
 use App\Models\User;
-use App\Models\UserStreak;
-use App\Models\XpEvent;
+use App\Services\GamificationService;
 use Illuminate\Http\JsonResponse;
 
 class QuestionController extends Controller
 {
+    public function __construct(private readonly GamificationService $gamification) {}
+
     public function attempt(QuestionAttemptRequest $request, Question $question): JsonResponse
     {
         $question->load('lesson.domain');
@@ -41,51 +42,15 @@ class QuestionController extends Controller
         ]);
 
         if ($isFirstAttempt) {
-            $this->awardXp($user, $attempt, $isCorrect);
+            $this->gamification->awardXp($user, $attempt, $isCorrect);
 
             if (! $isCorrect) {
                 GenerateAiExplanationJob::dispatch($attempt, $question);
             }
         }
 
-        $this->updateStreak($user);
+        $this->gamification->updateStreak($user);
 
         return $this->created(new QuestionAttemptResource($attempt->load('question')));
-    }
-
-    private function awardXp(User $user, QuestionAttempt $attempt, bool $isCorrect): void
-    {
-        $xpAmount = $isCorrect ? 10 : 2;
-        $reason = $isCorrect ? 'correct_answer' : 'attempted_answer';
-
-        XpEvent::query()->create([
-            'user_id' => $user->id,
-            'amount' => $xpAmount,
-            'reason' => $reason,
-            'question_attempt_id' => $attempt->id,
-        ]);
-
-        $user->increment('xp', $xpAmount);
-    }
-
-    private function updateStreak(User $user): void
-    {
-        $streak = UserStreak::query()->firstOrCreate(['user_id' => $user->id]);
-        $today = now()->toDateString();
-
-        if ($streak->last_activity_date?->toDateString() === $today) {
-            return;
-        }
-
-        $yesterday = now()->subDay()->toDateString();
-        $isConsecutive = $streak->last_activity_date?->toDateString() === $yesterday;
-
-        $newStreak = $isConsecutive ? $streak->current_streak + 1 : 1;
-
-        $streak->update([
-            'current_streak' => $newStreak,
-            'longest_streak' => max($streak->longest_streak, $newStreak),
-            'last_activity_date' => $today,
-        ]);
     }
 }

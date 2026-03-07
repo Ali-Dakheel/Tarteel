@@ -1,3 +1,4 @@
+import { parseApiError } from '@/lib/api/errors';
 import type { User } from '@/types/api';
 
 export type LoginPayload = { email: string; password: string };
@@ -11,10 +12,9 @@ export async function login(payload: LoginPayload): Promise<AuthResponse> {
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? 'Login failed');
+    throw new Error(await parseApiError(res, 'Login failed'));
   }
-  return res.json();
+  return res.json() as Promise<AuthResponse>;
 }
 
 export async function register(payload: RegisterPayload): Promise<AuthResponse> {
@@ -24,10 +24,9 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? 'Registration failed');
+    throw new Error(await parseApiError(res, 'Registration failed'));
   }
-  return res.json();
+  return res.json() as Promise<AuthResponse>;
 }
 
 export async function logout(): Promise<void> {
@@ -37,6 +36,6 @@ export async function logout(): Promise<void> {
 export async function getMe(): Promise<User> {
   const res = await fetch('/api/auth/me');
   if (!res.ok) throw new Error('Unauthenticated');
-  const body = await res.json();
-  return (body as { data: User }).data;
+  const body = await res.json() as { data: User };
+  return body.data;
 }

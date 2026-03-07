@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Send, BookOpen } from 'lucide-react';
 
 type Message = {
-  id: number;
+  id: string;
   question: string; // frozen snapshot at submit time — never mutated
 };
 
@@ -33,7 +33,7 @@ export default function TutorPage() {
   const submit = (question: string) => {
     const trimmed = question.trim();
     if (!trimmed || isStreaming) return;
-    setMessages((prev) => [...prev, { id: Date.now(), question: trimmed }]);
+    setMessages((prev) => [...prev, { id: crypto.randomUUID(), question: trimmed }]);
     setInput('');
     setIsStreaming(true);
     if (textareaRef.current) {
@@ -107,7 +107,7 @@ export default function TutorPage() {
                     question_id: null,
                     selected_option: null,
                     lesson_id: null,
-                    domain: 'process',
+                    domain: null,
                     question_stem: msg.question,
                   }}
                   autoStart

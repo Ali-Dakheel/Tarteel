@@ -7,7 +7,7 @@ namespace App\Jobs;
 use App\Models\AiResponseCache;
 use App\Models\Question;
 use App\Models\QuestionAttempt;
-use GuzzleHttp\Client;
+use App\Services\FastApiClient;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -28,7 +28,7 @@ class GenerateAiExplanationJob implements ShouldQueue
         $this->onQueue('ai-explanations');
     }
 
-    public function handle(): void
+    public function handle(FastApiClient $fastApi): void
     {
         $lesson = $this->question->lesson;
 
@@ -40,18 +40,11 @@ class GenerateAiExplanationJob implements ShouldQueue
             'question_stem' => $this->question->stem,
         ];
 
-        $client = new Client(['timeout' => 120]);
-
         try {
-            $response = $client->post(config('services.fastapi.url').'/explain', [
-                'headers' => ['X-Internal-Key' => config('services.fastapi.key')],
-                'json' => $payload,
-            ]);
-
-            $explanation = $response->getBody()->getContents();
+            $explanation = $fastApi->explain($payload);
 
             AiResponseCache::query()->updateOrCreate(
-                ['query_hash' => $this->buildCacheKey()],
+                ['query_hash' => AiResponseCache::makeKey($payload)],
                 [
                     'response' => $explanation,
                     'retrieved_chunk_ids' => [],
@@ -68,10 +61,5 @@ class GenerateAiExplanationJob implements ShouldQueue
 
             throw $e;
         }
-    }
-
-    private function buildCacheKey(): string
-    {
-        return hash('sha256', $this->question->id.':'.$this->attempt->selected_option);
     }
 }

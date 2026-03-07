@@ -2,7 +2,7 @@ export type ExplainPayload = {
   question_id: number | null;
   selected_option: number | null;
   lesson_id: number | null;
-  domain: string;
+  domain: string | null;
   question_stem: string;
 };
 

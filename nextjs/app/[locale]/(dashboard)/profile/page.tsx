@@ -17,6 +17,7 @@ import type { User, Streak } from '@/types/api';
 
 export default function ProfilePage() {
   const t = useTranslations('profile');
+  const tAuth = useTranslations('auth');
   const locale = useLocale();
   const router = useRouter();
 
@@ -93,7 +94,7 @@ export default function ProfilePage() {
 
       {/* Logout */}
       <Button variant="outline" className="w-full" onClick={handleLogout}>
-        {useTranslations('auth')('logout')}
+        {tAuth('logout')}
       </Button>
     </div>
   );

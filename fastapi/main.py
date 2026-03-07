@@ -1,6 +1,9 @@
 import json
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+
+logger = logging.getLogger(__name__)
 
 import httpx
 from fastapi import Depends, FastAPI, Request
@@ -40,6 +43,19 @@ async def _cached_sse(explanation: str) -> AsyncGenerator[str, None]:
     yield "data: [DONE]\n\n"
 
 
+async def _safe_stream(
+    body: ExplainRequest,
+    client: httpx.AsyncClient,
+) -> AsyncGenerator[str, None]:
+    """Wrap the pipeline stream so errors after streaming starts are sent as SSE error events."""
+    try:
+        async for chunk in run_pipeline_streaming(body, client):
+            yield chunk
+    except Exception as e:
+        logger.error("SSE pipeline failed mid-stream: %s", e)
+        yield f"data: {json.dumps({'error': 'AI service error'}, ensure_ascii=False)}\n\n"
+
+
 @app.post("/explain", dependencies=[Depends(verify_internal_key)])
 async def explain(request: Request, body: ExplainRequest):
     """
@@ -62,7 +78,7 @@ async def explain(request: Request, body: ExplainRequest):
         return JSONResponse({"explanation": cached, "chunk_ids": [], "cache_key": cache_key})
     if is_streaming:
         return StreamingResponse(
-            run_pipeline_streaming(body, client),
+            _safe_stream(body, client),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
