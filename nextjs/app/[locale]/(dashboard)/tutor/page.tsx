@@ -12,14 +12,9 @@ type Message = {
   question: string; // frozen snapshot at submit time — never mutated
 };
 
-const STARTERS = [
-  'What do projects enable organizations to do?',
-  'What is the difference between a project and operations?',
-  'What is the role of the project sponsor?',
-];
-
 export default function TutorPage() {
   const t = useTranslations('tutor');
+  const starters = t.raw('starters') as string[];
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -79,7 +74,7 @@ export default function TutorPage() {
               <p className="text-sm text-muted-foreground mt-1 max-w-sm">{t('subtitle')}</p>
             </div>
             <div className="flex flex-wrap gap-2 justify-center mt-2">
-              {STARTERS.map((s) => (
+              {starters.map((s) => (
                 <button
                   key={s}
                   onClick={() => submit(s)}

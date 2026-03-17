@@ -62,6 +62,11 @@
     "submit": "Ask",
     "loading": "Thinking...",
     "error": "Failed to get explanation. Please try again.",
+    "starters": [
+      "What do projects enable organizations to do?",
+      "What is the difference between a project and operations?",
+      "What is the role of the project sponsor?"
+    ],
     "domains": {
       "people": "People",
       "process": "Process",
